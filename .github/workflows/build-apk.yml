@@ -1,12 +1,17 @@
-name: Construire l'APK
+name: Construire l'application
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  build:
+  apk:
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le code
@@ -35,10 +40,48 @@ jobs:
         run: flutter pub get
 
       - name: Construire l'APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-shrink
 
       - name: Publier l'APK
         uses: actions/upload-artifact@v4
         with:
           name: aquarium-reseau-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  web:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Générer les fichiers web
+        run: flutter create --platforms=web --org cm.aquarium --project-name aquarium_reseau .
+
+      - name: Nommer l'application
+        run: |
+          sed -i 's#<title>.*</title>#<title>Aquarium Réseau</title>#' web/index.html
+          sed -i 's#content="aquarium_reseau"#content="Aquarium"#' web/index.html
+
+      - name: Télécharger les dépendances
+        run: flutter pub get
+
+      - name: Construire le site web
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+
+      - name: Préparer la publication
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: Publier sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
