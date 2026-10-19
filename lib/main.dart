@@ -11,8 +11,31 @@ const supabaseKey = 'sb_publishable_ioELBHQCDGue089RSU7I0Q_psv9287F';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+  try {
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+  } catch (e, s) {
+    runApp(StartupErrorApp('$e\n\n$s'));
+    return;
+  }
   runApp(const AquariumApp());
+}
+
+class StartupErrorApp extends StatelessWidget {
+  final String message;
+  const StartupErrorApp(this.message, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Erreur au démarrage')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: SelectableText(message),
+        ),
+      ),
+    );
+  }
 }
 
 final db = Supabase.instance.client;
